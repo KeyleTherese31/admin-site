@@ -1,129 +1,134 @@
 <template>
-    <div class="login-page">
-      <div class="login-container">
-        <img src="@/assets/logo.jpg" alt="JobCrest Logo" class="logo d-block mx-auto mb-3" />
-        <h2 class="login-title">Admin Login</h2>
-  
-        <form @submit.prevent="handleLogin">
-          <div class="input-group">
-            <label for="username">Username:</label>
-            <input type="text" v-model="username" id="username" required placeholder="Enter your username" />
-          </div>
-  
-          <div class="input-group">
-            <label for="password">Password:</label>
-            <input type="password" v-model="password" id="password" required placeholder="Enter your password" />
-          </div>
-  
-          <div class="role-selection">
-            <label for="role">Role:</label>
-            <select v-model="role" id="role" required>
-              <option value="admin">Admin</option>
-              <option value="superadmin">Superadmin</option>
-            </select>
-          </div>
-          <br>
-          <button type="submit" class="login-btn">Login</button>
-  
-          <!-- Show register button only if role is admin -->
-          <button v-if="role === 'admin'" @click.prevent="showRegister = true" class="create-btn">Create Admin Account</button>
-        </form>
-  
-        <p v-if="loginError" class="error-message">{{ loginError }}</p>
-  
-        <!-- Registration Modal -->
-        <div v-if="showRegister" class="modal-overlay">
-          <div class="modal-content">
-            <h3>Create Admin Account</h3>
-            <form @submit.prevent="registerAdmin">
-              <input type="text" v-model="newUsername" placeholder="Username" required />
-              <input type="email" v-model="newEmail" placeholder="Email" required />
-              <input type="password" v-model="newPassword" placeholder="Password" required />
-              <br />
-              <button type="submit">Submit</button>
-              <button type="button" @click="showRegister = false">Cancel</button>
-            </form>
-            <p v-if="registerError" class="error-message">{{ registerError }}</p>
-            <p v-if="registerSuccess" class="success-message">Account created! Please wait for Superadmin approval.</p>
-          </div>
+  <div class="login-page">
+    <div class="login-container">
+      <img src="@/assets/logo.jpg" alt="Logo" class="logo" />
+      <h2 class="login-title">Login to Jobcrest</h2>
+
+      <div class="input-group">
+        <label for="role">Login As </label>
+        <select v-model="role" required>
+          <option disabled value="">Select Role</option>
+          <option value="superadmin">Superadmin</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <label for="username">Username</label>
+        <input v-model="username" type="text" id="username" placeholder="Enter username" required />
+      </div>
+
+      <div class="input-group">
+        <label for="password">Password</label>
+        <input v-model="password" type="password" id="password" placeholder="Enter password" required />
+      </div>
+
+      <button class="login-btn" @click="handleLogin">Login</button>
+      <button class="create-btn" @click="showModal = true">Create Admin Account</button>
+
+      <p class="error-message" v-if="loginError">{{ loginError }}</p>
+      <p class="success-message" v-if="registerSuccess">Account created! Await Superadmin approval.</p>
+      <p class="error-message" v-if="registerError">{{ registerError }}</p>
+    </div>
+
+    <!-- Modal for Admin Registration -->
+    <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
+      <div class="modal-content">
+        <h3>Create Admin Account</h3>
+        <div class="input-group">
+          <label>Username</label>
+          <input v-model="newUsername" type="text" placeholder="Username" />
         </div>
+        <div class="input-group">
+          <label>Email</label>
+          <input v-model="newEmail" type="email" placeholder="Email" />
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input v-model="newPassword" type="password" placeholder="Password" />
+        </div>
+        <button class="create-btn" @click="registerAdmin">Register</button>
       </div>
     </div>
-  </template>
-  
-  <script>
-  export default {
-    data() {
-      return {
-        username: '',
-        password: '',
-        role: 'admin',
-        loginError: '',
-        showRegister: false,
-        newUsername: '',
-        newEmail: '',
-        newPassword: '',
-        registerError: '',
-        registerSuccess: false
-      };
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      username: '',
+      password: '',
+      role: '',
+      loginError: '',
+      newUsername: '',
+      newEmail: '',
+      newPassword: '',
+      registerError: '',
+      registerSuccess: false,
+      showModal: false
+    };
+  },
+  methods: {
+    async handleLogin() {
+      this.loginError = '';
+      try {
+        const response = await this.$axios.post('http://127.0.0.1:8000/api/token/', {
+          username: this.username,
+          password: this.password
+        });
+
+        const { access, refresh, is_superadmin, is_admin, is_active } = response.data;
+
+        if (!is_active) {
+          this.loginError = 'Account not approved yet by Superadmin.';
+          return;
+        }
+
+        if (this.role === 'superadmin' && !is_superadmin) {
+          this.loginError = 'You are not authorized as Superadmin.';
+          return;
+        } else if (this.role === 'admin' && !is_admin) {
+          this.loginError = 'You are not registered as Admin.';
+          return;
+        }
+
+        localStorage.setItem('token', access);
+        localStorage.setItem('refresh', refresh);
+        localStorage.setItem('role', this.role);
+        localStorage.setItem('username', this.username);
+
+        this.$router.push({ name: 'dashboard' });
+      } catch (error) {
+        console.error(error.response?.data || error);
+        this.loginError = 'Invalid credentials. Try again.';
+      }
     },
-    methods: {
-      async handleLogin() {
-        this.loginError = '';
-        try {
-          const response = await this.$axios.post('/api/token/', {
-            username: this.username,
-            password: this.password
-          });
-  
-          const { access, refresh, is_superadmin, is_admin, is_active } = response.data;
-  
-          if (!is_active) {
-            this.loginError = 'Account not approved yet by Superadmin.';
-            return;
-          }
-  
-          if (this.role === 'superadmin' && !is_superadmin) {
-            this.loginError = 'You are not authorized as Superadmin.';
-            return;
-          } else if (this.role === 'admin' && !is_admin) {
-            this.loginError = 'You are not registered as Admin.';
-            return;
-          }
-  
-          localStorage.setItem('token', access);
-          localStorage.setItem('refresh', refresh);
-          localStorage.setItem('role', this.role);
-          localStorage.setItem('username', this.username);
-  
-          this.$router.push({ name: 'dashboard' });
-        } catch (error) {
-          this.loginError = 'Invalid credentials. Try again.';
-        }
-      },
-  
-      async registerAdmin() {
-        this.registerError = '';
-        this.registerSuccess = false;
-        try {
-          await this.$axios.post('/api/register-admin/', {
-            username: this.newUsername,
-            email: this.newEmail,
-            password: this.newPassword
-          });
-          this.registerSuccess = true;
-          this.newUsername = '';
-          this.newEmail = '';
-          this.newPassword = '';
-        } catch (error) {
-          this.registerError = 'Error creating account. Username or email might already exist.';
-        }
+
+    async registerAdmin() {
+      this.registerError = '';
+      this.registerSuccess = false;
+      try {
+        await this.$axios.post('http://127.0.0.1:8000/api/register-admin/', {
+          username: this.newUsername,
+          email: this.newEmail,
+          password: this.newPassword
+        });
+        this.registerSuccess = true;
+        this.newUsername = '';
+        this.newEmail = '';
+        this.newPassword = '';
+        this.showModal = false;
+      } catch (error) {
+        console.error(error.response?.data || error);
+        this.registerError = 'Error creating account. Username or email might already exist.';
       }
     }
-  };
-  </script>
+  }
+};
+</script>
   
-  <style scoped>
+<style scoped>
   .login-page {
     display: flex;
     justify-content: center;
@@ -224,5 +229,5 @@
     width: 350px;
     text-align: center;
   }
-  </style>
-  
+</style>
+   
