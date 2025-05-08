@@ -6,6 +6,7 @@ import TestQuestions from '@/components/TestQuestions.vue';
 import JobseekerAnswers from '@/components/JobseekerAnswers.vue';
 import CVEntries from '@/components/CVEntries.vue';
 import Settings from '@/components/Settings.vue';
+import store from '@/store';
 
 Vue.use(Router);
 
@@ -15,36 +16,73 @@ const router = new Router({
       path: '/',
       name: 'login',
       component: LoginPage,
+      beforeEnter: (to, from, next) => {
+        if (store.state.token) {
+          next({ name: 'dashboard' });
+        } else {
+          next();
+        }
+      },
     },
     {
       path: '/dashboard',
       name: 'dashboard',
       component: AdminDashboard,
-      meta: { requiresAuth: true },
+      beforeEnter: (to, from, next) => {
+        if (!store.state.token) {
+          next({ name: 'login' });
+        } else {
+          next();
+        }
+      },
     },
     {
       path: '/test-questions',
       name: 'test-questions',
       component: TestQuestions,
-      meta: { requiresAuth: true },
+      beforeEnter: (to, from, next) => {
+        if (!store.state.token) {
+          next({ name: 'login' });
+        } else {
+          next();
+        }
+      },
     },
     {
       path: '/jobseeker-answers',
       name: 'jobseeker-answers',
       component: JobseekerAnswers,
-      meta: { requiresAuth: true },
+      beforeEnter: (to, from, next) => {
+        if (!store.state.token) {
+          next({ name: 'login' });
+        } else {
+          next();
+        }
+      },
     },
     {
       path: '/cv-entries',
       name: 'cv-entries',
       component: CVEntries,
-      meta: { requiresAuth: true },
+      beforeEnter: (to, from, next) => {
+        if (!store.state.token) {
+          next({ name: 'login' });
+        } else {
+          next();
+        }
+      },
     },
     {
       path: '/settings',
       name: 'settings',
       component: Settings,
-      meta: { requiresAuth: true },
+      beforeEnter: (to, from, next) => {
+        if (!store.state.token) {
+          next({ name: 'login' });
+        } else {
+          next();
+        }
+      },
     },
   ],
 });
